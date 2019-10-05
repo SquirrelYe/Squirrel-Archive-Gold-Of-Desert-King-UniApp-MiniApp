@@ -1,0 +1,239 @@
+
+.main {
+	height: 100vh;
+	width: 100vw;
+}
+
+.box {
+	display: flex;
+	flex-direction: row;
+}
+
+.left {
+	width: 40vw;
+	height: 100vh;
+}
+
+.right {
+	width: 100vw;
+	height: 100vh;
+}
+
+.l-top {
+	height: 10vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.l-item {
+	height: 90vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.r-top {
+	height: 10vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.r-item {
+	height: 90vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.show1 {
+	width: 95%;
+	height: 95%;
+	background-color: white;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.drawer-open{
+	position: absolute;
+	left: 3vw;
+}
+
+.map {
+	height: 100%;
+	width: 100%;
+}
+
+.m-item {
+	width: 14.28%;
+	height: 14.28%;
+	float: left;
+	background-color: gainsboro;
+	border: 1rpx solid gainsboro;
+	display: flex;
+	align-items: flex-start;
+	background-repeat: no-repeat;
+	background-size: 100% 100%;
+}
+
+.c-item {
+	width: 25%;
+	height: 10%;
+	margin-top: 10rpx;
+}
+
+.shop {
+	width: 100%;
+	height: 90%;
+	background-color: white;
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+}
+
+.shop-item {
+	width: 100%;
+	height: 40rpx;
+	display: flex;
+	align-items: center;
+	flex-direction: row;
+	justify-content: space-around;
+}
+
+.shop-item text {
+	width: 22%;
+	justify-content: center;
+}
+
+.shop-item input {
+	width: 60%;
+}
+
+.sub {
+	margin-top: 40rpx;
+	width: 90%;
+	height: 40rpx;
+}
+
+.table {
+	border: 0px solid darkgray;
+}
+
+.tr {
+	display: flex;
+	width: 100%;
+	justify-content: center;
+	height: 30px;
+	align-items: center;
+}
+
+.td {
+	width: 40%;
+	justify-content: center;
+	text-align: center;
+}
+
+.th {
+	width: 40%;
+	justify-content: center;
+	display: flex;
+	height: 30px;
+	align-items: center;
+}
+
+.list-msg {
+	padding: 0 20rpx;
+	background-color: #fff;
+	position: relative;
+}
+
+.list-msg1 {
+	height: 50rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.list-msg .list-msg2 {
+	height: 40rpx;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border: 1px solid #ccc;
+	padding: 0 10rpx;
+}
+
+.select_box {
+	height: 30vh;
+	background-color: #eee;
+	padding: 0 10rpx;
+	width: 93%;
+	top: 0rpx;
+	z-index: 1;
+	overflow: hidden;
+}
+
+.select_one {
+	height: 40rpx;
+	line-height: 40rpx;
+	border-bottom: 1px solid #ccc;
+}
+
+.input_number {
+	width: 50px;
+}
+
+.tool {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	flex-direction: row;
+}
+
+.tool_item {
+	width: 20%;
+	height: 100%;
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-start;
+	flex-direction: column;
+}
+
+.tool_content {
+	width: 80%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.whether {
+	width: 100%;
+	height: 20%;
+	border-bottom: 1px solid rgb(196, 196, 196);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.land {
+	width: 100%;
+	height: 100%;
+	flex-direction: column;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.about {
+	width: 94%;
+	margin: 3%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+}
