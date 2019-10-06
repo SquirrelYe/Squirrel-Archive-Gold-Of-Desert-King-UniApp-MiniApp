@@ -19,6 +19,7 @@ module.exports={
   joinGame(uid, gid) { return req.get('/ent/user', { 'judge': 3, 'id': uid, 'game_id': gid }) },
   joinTeam(uid, tid) { return req.get('/ent/user', { 'judge': 3, 'id': uid,'team_id':tid }) },
   createTeam(gid, n) { return req.get('/ent/team', { 'judge': 1, 'game_id': gid, 'name': n,'condition':0,'day_id':1,'map_id':42,'lose':0 }) },
+  updateTeamIsDig(id,isdig){ return req.get('/ent/team', { 'judge': 3, 'id': id,'isDig':isdig } )},
   
   findAllTeam(){ return req.get('/ass/team', { 'judge': 2 }) },
   findUserByTeam(team_id){ return req.get('/ass/user',{ 'judge':4,'team_id':team_id}) },

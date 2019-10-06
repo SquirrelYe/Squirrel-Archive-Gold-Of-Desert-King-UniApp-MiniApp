@@ -109,16 +109,16 @@ export default {
 		return {
 			logo: '/static/logo.png',
 			// userinfo
-			userinfo: null,
+			userinfo: '',
 			// modal信息
-			modalName: null,
-			modalId: null,
+			modalName: '',
+			modalId: '',
 			// 验证码状态信息
 			codeCondition: 0,
 			code: '',
 			// 用户填写信息
-			name: null,
-			pass: null,
+			name: '',
+			pass: '',
 			mail: ''
 		};
 	},
@@ -214,7 +214,7 @@ export default {
 		// 登录
 		login() {
 			print.log('登录', this.name, this.pass);
-			if (this.name == null || this.pass == null) {
+			if (this.name == '' || this.pass == '') {
 				tools.toast.none('不能输入为空喔~');
 				return;
 			}
@@ -248,11 +248,11 @@ export default {
 		},
 		// 隐藏modal
 		hideModal(e) {
-			this.setData({ modalName: null });
+			this.setData({ modalName: '' });
 			// 优化显示
 			let that = this;
 			setTimeout(function() {
-				that.setData({ modalId: null });
+				that.setData({ modalId: '' });
 			}, 500);
 			// 初始化验证信息
 			this.setData({ codeCondition: 0 });

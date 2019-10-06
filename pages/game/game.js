@@ -814,46 +814,69 @@ export default {
 				tools.toast.success('获取成功！');
 			}
 		},
-		// 村庄购物
-		villageBuy() {
-			apis.findAllBagByTeam(this.teaminfo.statistic_id).then(res => {
-				// 增加负载
-				let load = 0;
-				if (this.village_thing == 0) {
-					load = Number(res.data.load) - Number(10 * this.number);
-				}
-				if (this.village_thing == 1) {
-					load = Number(res.data.load) - Number(100 * this.number);
-				}
-				if (load < 0) tools.toast.none('载重不足！');
-				else {
-					this.updateModuleNumber(this.teaminfo.statistic_id, this.village_thing, this.number);
-					apis.updateMoneyLoad(res.data.money, load, this.teaminfo.statistic_id).then(res => {
-						tools.toast.success('使用成功！');
-					});
-				}
-			});
+		// 村庄购物 * 数据写死 后期维护注意观察*
+		async villageBuy() {
+			if(this.number <= 0){
+				tools.toast.none('输入非法！');
+				return;
+			}
+			tools.loading.show('加载中');
+			let res = await apis.findAllBagByTeam(this.teaminfo.statistic_id);
+			// 计算负载
+			let load = 0;
+			if (this.village_thing == 0) load = Number(res.data.load) - Number(10 * this.number);
+			if (this.village_thing == 1) load = Number(res.data.load) - Number(100 * this.number);
+			// 计算金币
+			let money = 0;
+			if (this.village_thing == 0) money = Number(res.data.money) - Number(20 * this.number);
+			if (this.village_thing == 1) money = Number(res.data.money) - Number(50 * this.number);
+			if (load < 0) {
+				tools.toast.none('载重不足！');
+				return;
+			}
+			this.updateModuleNumber(this.teaminfo.statistic_id, this.village_thing, this.number);
+			apis.updateMoneyLoad(money, load, this.teaminfo.statistic_id);
+			// 更新团队信息
+			this.getCurTeamInfo();
+			this.hideModal();
+			tools.toast.success('获取成功！');
 		},
 		// 挖取金块
-		getgold() {
-			apis.findAllBagByTeam(this.teaminfo.statistic_id).then(res => {
-				// 增加负载
-				let load = Number(res.data.load) - 50;
-				if (load < 0) tools.toast.none('载重不足！');
-				else {
-					this.updateModuleNumber(this.teaminfo.statistic_id, 5, 1); // 5为金的module_id
-					apis.updateMoneyLoad(res.data.money, load, this.teaminfo.statistic_id).then(res => {
-						tools.toast.success('挖掘成功！');
-					});
-				}
-			});
+		async getgold() {
+			// 获取路径信息
+			let route = await apis.findAllRouteByTeam(this.userinfo.team_id)
+			const { count,rows } = route.data;
+			if(rows[count-2].map_id != rows[count-1].map_id){
+				tools.toast.none('到达第二天才能挖掘金块！');
+				return;
+			}
+			if(this.teaminfo.isDig != 0){
+				tools.toast.none('今天已经挖掘过了！');
+				return;
+			}
+			tools.loading.show('加载中');
+			let res = await apis.findAllBagByTeam(this.teaminfo.statistic_id);
+			// 增加负载
+			const { gold } = conf.modules;
+			let money = res.data.money;
+			let load = Number(res.data.load) - gold.weight;
+			if (load < 0) tools.toast.none('载重不足！');
+			else {
+				this.updateModuleNumber(this.teaminfo.statistic_id, gold.id, 1); // 每次挖掘一块
+				await apis.updateMoneyLoad(money, load, this.teaminfo.statistic_id);	
+				await apis.updateTeamIsDig(this.userinfo.team_id,1); 	// 是否挖掘金块（0.未挖掘、1.已挖掘）
+				// 更新团队信息
+				this.getCurTeamInfo();
+				this.hideModal();
+				tools.toast.success('获取成功！');
+			}
 		},
 		// 物品数量模板
 		async updateModuleNumber(statistic_id, module_id, number) {
 			if (number > 0) {
 				// 更新库存数量
 				let res = await apis.moduleFindOrCreate(statistic_id, module_id, number);
-				print.log(res.data);
+				print.log('物品数量模板',res.data);
 				// 库存存在此产品，更新数量
 				if (!res.data[1]) {
 					let sum = Number(res.data[0].number) + Number(number);

@@ -201,7 +201,7 @@
 										<text class="text-xs">输入交易数量：</text>
 										<view class="list-msg2"><input placeholder="0" type="number" @input="getNumber" v-model="number" class="input_number text-xs" /></view>
 									</view>
-									<button type="primary" class="sub" @click="send_tran">发送交易</button>
+									<button type="primary"  @click="send_tran">发送交易</button>
 								</view>
 							</view>
 							<!-- 操作 -->
@@ -267,18 +267,18 @@
 							<!-- 玩法介绍 -->
 							<view v-if="judge == 6" class="shop">
 								<text class="text-xs text-green">玩法介绍</text>
-								<scroll-view scroll-y style="height:70vh">
+								<scroll-view scroll-y style="height:75vh">
 									<!-- <view class="about"><text style="font-size:15rpx">详细请见赛制指引</text></view> -->
 									<text style="font-size:15rpx; text-align: center;">	1、	每队项目正式开始前有25分钟的决策时间；
 											2、	每天每队最多只能沿着地图行进一个方格；
 											3、	在出发前，每队拥有夺宝基金1000元，最大载重能力1000磅；
-											4、	在到达大山的第一天起可以挖掘金币，并且每天只能挖掘一枚金币；
+											4、	在到达大山的第一天起可以挖掘金块，并且每天只能挖掘一枚金块；
 											5、	在项目进行的25天内，每队每天都将消耗食物和水，能够购买食物和水的地方为大本营和村庄。如果某一队在夺宝过程中，到达某地时所剩的食物或者水出现零值时（即使该地点正处于水源或食物供应处），该探险队仍将被掩埋在沙漠中无法生还；
-											6、	在大山中每天只能挖一块金币，每块金币重50磅，每磅金币价值100元。
-											第一队返回大本营获得现金为：金币数量*50磅*100元*100%+剩余钱币，
-											第二组所获积分为：金币数量*50磅*100元*90%+剩余钱币，
-											第三队所获积分为：金币数量*50磅*100元*80%+剩余钱币，
-											以此类推逐步递减，在整个夺宝过程中，金币是不可以使用的；
+											6、	在大山中每天只能挖一块金块，每块金块重50磅，每磅金块价值100元。
+											第一队返回大本营获得现金为：金块数量*50磅*100元*100%+剩余钱币，
+											第二组所获积分为：金块数量*50磅*100元*90%+剩余钱币，
+											第三队所获积分为：金块数量*50磅*100元*80%+剩余钱币，
+											以此类推逐步递减，在整个夺宝过程中，金块是不可以使用的；
 									</text>
 								</scroll-view>
 							</view>
@@ -352,9 +352,7 @@
 					</scroll-view>
 					<!-- 藏宝山挖金 -->
 					<scroll-view scroll-y class="main-content" v-if="showland == 2">
-						<view class="text-xs text-red">藏宝山区域可以挖掘金块</view>
-						<view class="text-xs">背包剩余载重为：{{ teaminfo.statistic.load }}</view>
-						<view class="text-xs text-red">每天只能挖掘一块金块</view>
+						<view class="text-xs text-green">每天只能挖掘一块金块</view>
 						<view class="text-xs">点击确定即可挖掘当天一块金块</view>
 					</scroll-view>
 					<!-- 商店购物 -->
