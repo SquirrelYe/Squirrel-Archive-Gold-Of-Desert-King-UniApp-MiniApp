@@ -36,6 +36,8 @@ var tool = {
 		if (x == -1) fcondition = '冻结';
 		if (x == -2) fcondition = '迷路';
 		if (x == -3) fcondition = '死亡';
+		if (x == 1) fcondition = '使用帐篷中';
+		if (x == 2) fcondition = '使用指南针中';
 		return Object.assign(obj,{ fcondition });
 	},
 	formatWhether: function(obj,x) {

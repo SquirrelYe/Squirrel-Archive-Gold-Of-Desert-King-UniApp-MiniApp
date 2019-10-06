@@ -86,6 +86,7 @@ export default {
 		// 加入队伍
 		async enter(id) {
 			console.log('加入队伍',id);
+			tools.loading.show('加载中');
 			try {
 				const info = uni.getStorageSync('info');
 				if (info) {
@@ -112,17 +113,18 @@ export default {
 		async create() {
 			let userid = uni.getStorageSync('info').id;
 			console.log(this.name);
+			tools.loading.show('加载中');
 			if (this.name) {
 				let res = await apis.createTeam(this.gid, this.name)
 				console.log(res.data)
 				if (res.data) {
-					tools.toast.success('创建成功');
 					// 自动加入
 					await apis.joinTeam(userid, res.data.id);
 					// 修改职务 队长
 					await apis.updateJob(userid, 0);
 					// 跳转赛事大厅
-					let info = await apis.findUserById(userid);					
+					let info = await apis.findUserById(userid);		
+					tools.toast.success('创建成功');			
 					uni.setStorageSync('info', info.data);   // 更新用户信息
 					uni.redirectTo({ url: `../game/game?info=${JSON.stringify(info.data)}` });    // 跳转 game 页面
 				}

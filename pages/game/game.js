@@ -2,6 +2,7 @@ const req = require('../../utils/req.js');
 const apis = require('../../utils/apis.js');
 const print = require('../../utils/print.js');
 const tools = require('../../utils/tools.js');
+const conf = require('../../utils/config.js');
 // 引入过滤器
 const filter = require('../../utils/filter.js');
 // 对象方法过滤
@@ -44,6 +45,7 @@ export default {
 			mapteam: false,
 			mapteamitem:[],
 
+			tranItems:[],
 			judgeteam: false,
 			judgething: false,
 			tran_team: null,
@@ -545,15 +547,17 @@ export default {
 			let res = await apis.findAllTeamByMap(map);
 			this.tran = res.data.rows
 			console.log('当前位置',map,'存在队伍',this.tran);
-			// 展示背包已有的物品
-			this.showBag();
+			// 展示背包已有的物品 + 金币信息	
+			let bag = await apis.findAllBagByTeam(this.teaminfo.statistic_id);
+			this.tranItems = bag.data.modules.concat({ id: -1,name: '金币', type: -1 })
+			console.log('显示交易信息',this.tranItems)
 		},
 		showTranTeam() { this.setData({ judgeteam: !this.judgeteam }); },
 		chooseteam(e) { this.setData({ tran_team: e.currentTarget.dataset.item, judgeteam: false }); },
 		showTranThing() { this.setData({ judgething: !this.judgething }); },
 		choosething(e) { this.setData({ tran_thing: e.currentTarget.dataset.item, judgething: false }); },
-		// 发送交易
-		// 金币、智者密函 无重量
+		// 发送交易 (不允许交易 金块、智者密函)
+		// 金币 无重量
 		async send_tran() {
 			print.log(this.tran_team, this.tran_thing, this.number);
 			tools.loading.show('加载中');
@@ -568,20 +572,26 @@ export default {
 					// 计算负载、金币
 					let money = Number(res.data.money) - Number(this.number);
 					let load = Number(res.data.load);
+					console.log('己方减少',res.data.money,money);
 					if (money >= 0) {
 						// 减少自己金币 【金币无重量】
 						await apis.updateMoneyLoad(money, load, this.teaminfo.statistic_id);
+						
+						/*  ----  */
 						// 增加对方金币
 						let other = await apis.findAllBagByTeam(this.tran_team.statistic.id);
 						// 计算负载、金币
 						let omoney = Number(other.data.money) + Number(this.number);
+						console.log('对方增加',other.data.money,omoney);
 						await apis.updateMoneyLoad(omoney, other.data.load, this.tran_team.statistic.id);
+						
 						// 写入交易
 						await apis.addOneTran(this.gid, 1, this.tid, this.tran_team.id, 1, this.number, -1, 1, `相同位置交易，物品金币`);
 						tools.toast.success('交易成功');
 						this.getCurTeamInfo();
 					} else {
 						tools.toast.none('金币数量不足');
+						return;
 					}
 				} else {
 					// 获取自己库存信息->减少自己库存
@@ -589,9 +599,33 @@ export default {
 					print.log(this.tran_thing,'其他物品交易',res.data);
 					// 减少库存
 					let sum = Number(res.data.number) - Number(this.number);
-					let meid = res.data.id;
-					if (sum < 0) tools.toast.none('库存不足！');
-					else {
+					let meid = res.data.id;  // 自己 中间表 id
+					// 帐篷⛺️ 获取 use 值
+					let use = res.data.use || 0;
+					if (sum < 0){
+						tools.toast.none('库存不足！');
+						return;
+					} else {
+						tools.loading.hide();
+						// 如果交易物品为 帐篷 计算 use 值，当仅剩下最后 一套⛺️时，如果使用过（use！= 3）则不允许交易；
+						// 更新 己方 的 use 值
+						if(this.tran_thing.type == 3){
+							console.log('交易物品 ⛺️',sum);
+							let nowMeUse = use - Number(this.number)*3;
+							if(sum >= 1){
+								let meuse = await apis.updateModuleUseNumber(meid,nowMeUse);
+								console.log(use,'交易⛺️ use值-->',nowMeUse,'结果',meuse);
+							}else{
+								if(use >= 3){  // 帐篷未使用
+									let meuse = await apis.updateModuleUseNumber(meid,nowMeUse);
+									console.log(use,'me 交易⛺️ use值-->',nowMeUse,'结果',meuse);									
+								}else{
+									tools.toast.none('帐篷已被使用，不允许交易！');
+									return;
+								}
+							}							
+						}
+						
 						// 减少自己库存
 						await apis.updateModuleNumber(meid, sum);
 						let res = await apis.findAllBagByTeam(this.teaminfo.statistic_id);
@@ -603,10 +637,17 @@ export default {
 						// 增加对方库存
 						let ores = await apis.moduleFindOrCreate(this.tran_team.statistic.id, this.tran_thing.type, this.number);
 						print.log('获取到对方信息',ores.data);
+						// 获取 use 值
+						let otherid = ores.data[0].id;
+						let ouse = ores.data[0].use || 0;
+						let nowOtherUse = ouse + Number(this.number)*3;
+						let otheruse = await apis.updateModuleUseNumber(otherid,nowOtherUse);
+						console.log(ouse,'other 交易⛺️ use值-->',nowOtherUse,'结果',otheruse);
+						// 更新数量
 						if (!ores.data[1]) {
 							// 库存存在此产品，更新数量
 							let sum = Number(ores.data[0].number) + Number(this.number);
-							let module = await apis.updateModuleNumber(ores.data[0].id, sum);
+							let module = await apis.updateModuleNumber(otherid, sum);
 							// 增加对方库存
 							await apis.updateModuleNumber(module.data.id, sum);
 						}
@@ -614,14 +655,9 @@ export default {
 						let otherTeamBag = await apis.findAllBagByTeam(this.tran_team.statistic.id);
 						let deload = Number(otherTeamBag.data.load) - Number(this.number * this.tran_thing.weight);
 						await apis.updateMoneyLoad(otherTeamBag.data.money, deload, this.tran_team.statistic.id);
-						
-						// 如果交易物品为 帐篷 计算 use 值
-						if(this.tran_thing.type == 3){
-							// apis.updateModuleUseNumber
-						}
-						
+												
 						// 写入交易
-						await apis.addOneTran(this.gid, 1, this.tid, this.tran_team.id, 0, this.number, this.tran_thing.type, 1, `相同位置交易，物品id为${this.tran_thing.id}`);
+						await apis.addOneTran(this.gid, 1, this.tid, this.tran_team.id, 0, this.number, this.tran_thing.type, 1, `相同位置交易，物品为${this.tran_thing.name}`);
 						tools.toast.success('交易成功');
 						this.getCurTeamInfo();
 					}
@@ -673,90 +709,72 @@ export default {
 		getland() { this.setData({ whether: false, land: true, info: false }); },
 		getinfo() { this.setData({ whether: false, land: false, info: true }); },
 		// 使用指南针
-		usecompose() {
-			let _this = this;
-			uni.showModal({
+		async usecompose() {
+			let [err,succ] = await uni.showModal({
 				title: '使用指南针',
 				content: '点击确定来使用指南针',
-				success(res) {
-					if (res.confirm) {
-						// 减少库存
-						apis.findOneThingByStatisyicBymodule(_this.teaminfo.statistic_id, 2).then(res => {
-							print.log(res.data);
-							// 减少库存
-							let sum = Number(res.data.number) - 1;
-							if (sum < 0) tools.toast.none('库存不足！');
-							else {
-								apis.updateModuleNumber(res.data.id, sum).then(res => {
-									apis.findAllBagByTeam(_this.teaminfo.statistic_id).then(res => {
-										// 增加负载
-										let load = Number(res.data.load) + 10;
-										apis.updateMoneyLoad(res.data.money, load, _this.teaminfo.statistic_id).then(res => {
-											apis.setTeamCondition(_this.teaminfo.id, 2).then(res => {
-												tools.toast.success('使用成功！');
-											});
-										});
-									});
-								});
-							}
-						});
-					}
+			})
+			if(succ.confirm){
+				tools.loading.show('加载中');
+				// 减少库存
+				let res = await apis.findOneThingByStatisyicBymodule(this.teaminfo.statistic_id, 2);
+				print.log('减少库存',res.data);
+				// 减少库存
+				let sum = Number(res.data.number) - 1;
+				if (sum < 0) tools.toast.none('库存不足！');
+				else {
+					await apis.updateModuleNumber(res.data.id, sum);
+					let bag = await apis.findAllBagByTeam(this.teaminfo.statistic_id);
+					// 增加负载
+					const { compose } = conf.modules;
+					let load = Number(bag.data.load) + compose.weight;
+					await apis.updateMoneyLoad(bag.data.money, load, this.teaminfo.statistic_id);
+					await apis.setTeamCondition(this.teaminfo.id, 2);
+					// 更新团队信息
+					this.getCurTeamInfo();
+					tools.toast.success('使用成功！');
 				}
-			});
+			}
 		},
 		// 使用帐篷
-		usetent() {
-			let _this = this;
-			uni.showModal({
+		async usetent() {
+			let [err,succ] = await uni.showModal({
 				title: '使用帐篷',
 				content: '点击确认使用帐篷，每顶帐篷可以使用3次',
-				success(res) {
-					if (res.confirm) {
-						// 减少库存
-						apis.findOneThingByStatisyicBymodule(_this.teaminfo.statistic_id, 3).then(res => {
-							print.log(res.data);
-							// 减少使用次数
-							let use = Number(res.data.use) - 1;
-							let sum = Number(res.data.number) - 1;
-							if (use < 0) tools.toast.none('使用次数不足！');
-							else {
-								if (use <= (res.data.number - 1) * 3) {
-									print.log('帐篷使用次数用完，丢弃帐篷');
-									apis.updateModuleUseNumber(res.data.id, use).then(res => {
-										if (res.data.affectRows[0] != 0) {
-											// 更新状态
-											apis.setTeamCondition(_this.teaminfo.id, 1);
-										} else {
-											tools.toast.none('使用失败！');
-										}
-									});
-									// 丢弃帐篷
-									apis.updateModuleNumber(res.data.id, sum).then(res => {
-										apis.findAllBagByTeam(_this.teaminfo.statistic_id).then(res => {
-											// 增加负载
-											let load = Number(res.data.load) + 60;
-											apis.updateMoneyLoad(res.data.money, load, _this.teaminfo.statistic_id).then(res => {
-												tools.toast.success('使用成功！');
-											});
-										});
-									});
-								} else {
-									apis.updateModuleUseNumber(res.data.id, use).then(res => {
-										if (res.data.affectRows[0] != 0) {
-											// 更新状态
-											apis.setTeamCondition(_this.teaminfo.id, 1).then(res => {
-												tools.toast.success('使用成功！');
-											});
-										} else {
-											tools.toast.none('使用失败！');
-										}
-									});
-								}
-							}
-						});
+			})
+			if(succ.confirm){
+				tools.loading.show('加载中');
+				// 减少库存
+				let res = await apis.findOneThingByStatisyicBymodule(this.teaminfo.statistic_id, 3);
+				print.log('减少库存',res.data);
+				// 减少使用次数
+				let smid = res.data.id;
+				let use = Number(res.data.use) - 1;
+				let sum = Number(res.data.number) - 1;
+				if (use < 0) tools.toast.none('使用次数不足！');
+				else {
+					if (use <= sum * 3) {
+						print.log('帐篷使用次数用完，丢弃帐篷');
+						// 更新use
+						await apis.updateModuleUseNumber(smid, use);
+						// 丢弃帐篷
+						await apis.updateModuleNumber(smid, sum);
+						let bag = await apis.findAllBagByTeam(this.teaminfo.statistic_id);
+						// 增加负载
+						const { tent } = conf.modules;
+						let load = Number(bag.data.load) + tent.weight;
+						apis.updateMoneyLoad(bag.data.money, load, this.teaminfo.statistic_id);
+					} else {
+						print.log('帐篷使用次数未用完');
+						await apis.updateModuleUseNumber(smid, use);
 					}
+					// 更新状态
+					await apis.setTeamCondition(this.teaminfo.id, 1);
+					// 更新团队信息
+					this.getCurTeamInfo();
+					tools.toast.success('使用成功！');
 				}
-			});
+			}
 		},
 		showVillageItem(e) { this.setData({ judgevillage: !this.judgevillage }); },
 		chooseVillageItem(e) {
@@ -775,19 +793,26 @@ export default {
 				this.hideModal();
 			});
 		},
-		// 沙漠取水
-		getWater() {
-			apis.findAllBagByTeam(this.teaminfo.statistic_id).then(res => {
-				// 增加负载
-				let load = Number(res.data.load) - Number(50 * this.number);
-				if (load < 0) tools.toast.none('载重不足！');
-				else {
-					this.updateModuleNumber(this.teaminfo.statistic_id, 1, this.number); // 1为水的module_id
-					apis.updateMoneyLoad(res.data.money, load, this.teaminfo.statistic_id).then(res => {
-						tools.toast.success('使用成功！');
-					});
-				}
-			});
+		// 绿洲取水
+		async getWater() {
+			if(this.number <= 0){
+				tools.toast.none('输入非法！');
+				return;
+			}
+			tools.loading.show('加载中');
+			let res = await apis.findAllBagByTeam(this.teaminfo.statistic_id);
+			// 增加负载
+			const { water } = conf.modules;
+			let load = Number(res.data.load) - Number(water.weight * this.number);
+			console.log(res.data.load,'--->',load)
+			if (load < 0) tools.toast.none('载重不足！');
+			else {
+				this.updateModuleNumber(this.teaminfo.statistic_id, water.id, this.number);
+				await apis.updateMoneyLoad(res.data.money, load, this.teaminfo.statistic_id);
+				// 更新团队信息
+				this.getCurTeamInfo();
+				tools.toast.success('获取成功！');
+			}
 		},
 		// 村庄购物
 		villageBuy() {

@@ -218,6 +218,7 @@ export default {
 				tools.toast.none('不能输入为空喔~');
 				return;
 			}
+			tools.loading.show('登录中');
 			apis.login(this.name, this.pass)
 				.then(res => {
 					let info = res.data;

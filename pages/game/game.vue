@@ -167,7 +167,7 @@
 							<!-- 交易 -->
 							<view class="shop" v-if="judge == 3">
 								<!-- 相同位置的两支队伍进行物品交易 -->
-								<text class="text-xs text-red">注意：相同位置队伍进行物品交易</text>
+								<text class="text-xs text-green">注意：同一位置队伍可进行物品交易,使用过的⛺不允许交易。️</text>
 								<view class="list-msg">
 									<!-- 队伍下拉框  -->
 									<view class="list-msg1">
@@ -192,7 +192,8 @@
 									</view>
 									<!-- 下拉需要显示的物品 -->
 									<scroll-view scroll-y class="select_box" v-if="judgething">
-										<block v-for="(item, index) in bag.modules" :key="index" v-if="item.type != 4 && item.type != 5">
+										<!-- 不允许交易 智者密函 金块 -->
+										<block v-for="(item, index) in tranItems" :key="index" v-if="item.type != 4 && item.type != 5">
 											<view class="select_one text-xs" @click="choosething" :data-item="item">{{ item.name }}</view>
 										</block>
 									</scroll-view>
