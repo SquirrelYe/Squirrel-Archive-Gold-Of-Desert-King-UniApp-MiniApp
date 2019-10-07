@@ -72,6 +72,7 @@ export default {
 			tran: [],
 			route: [],
 
+			isWeather:0,  // 0.未开启天气显示，1.开启天气显示
 			cwhether: null,
 			cwhetherName:''
 		};
@@ -666,7 +667,7 @@ export default {
 		},
 		// 获取当前天气信息
 		showTool(j) {
-			this.setData({ judge: j });
+			this.setData({ judge: j, isWeather: this.gameinfo.judgewhether });
 			let land = this.teaminfo.map.land;
 			if (land == 0) this.setData({ cwhether: this.teaminfo.day.whether_village }); // 大本营天气与村庄一样
 			if (land == 1) this.setData({ cwhether: this.teaminfo.day.whether_desert });

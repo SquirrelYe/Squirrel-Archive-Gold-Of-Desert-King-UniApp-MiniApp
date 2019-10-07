@@ -213,12 +213,18 @@
 								</view>
 								<view class="tool_content">
 									<view class="land" v-if="whether">
+										<!-- isWeather  0.未开启天气显示，1.开启天气显示 -->
 										<!-- 1.使用指南针 -->
 										<!-- 2.使用帐篷 -->
-										<text class="text-xs text-red">当前所处天气：{{ cwhetherName }}</text>
-										<block v-if="cwhether == 2 || cwhether == 3">
-											<text class="text-xs padding" @click="usecompose">使用指南针</text>
-											<text class="text-xs" @click="usetent">使用帐篷</text>
+										<block v-if="isWeather == 1">
+											<text class="text-xs text-green">当前所处天气：{{ cwhetherName }}</text>
+											<block v-if="cwhether == 2 || cwhether == 3">
+												<text class="text-xs padding" @click="usecompose">使用指南针</text>
+												<text class="text-xs" @click="usetent">使用帐篷</text>
+											</block>
+										</block>
+										<block v-else>
+											<text class="text-xs text-red">尚未公布当前天气</text>
 										</block>
 										<view class="about"><text class="text-green padding" style="font-size:15rpx">大本营天气与村庄一致</text></view>
 									</view>

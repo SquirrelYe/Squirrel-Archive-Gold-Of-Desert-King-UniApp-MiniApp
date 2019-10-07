@@ -73,7 +73,7 @@
 	background-color: gainsboro;
 	border: 1rpx solid gainsboro;
 	display: flex;
-	align-items: flex-start;
+	justify-content: center;
 	background-repeat: no-repeat;
 	background-size: 100% 100%;
 }
