@@ -86,9 +86,9 @@ export default {
 		this.getmap();
 		this.getCurInfo();
 		// 定时刷新数据
-		// setInterval(() => {
-		// 	this.reFresh();
-		// }, 20000);
+		setInterval(() => {
+			this.reFresh();
+		}, 5000);
 	},
 	filters: { ...filter },
 	methods: {
@@ -97,20 +97,15 @@ export default {
 		// 设值函数
 		setData(obj) { for (let val in obj) { this[val] = obj[val]; } },
 		// 定时刷新
-		reFresh(){
+		async reFresh(){
 			this.getCurInfo();
-			if (this.gameinfo.day.day > this.teaminfo.day.day && this.userinfo.job == 2 && !this.shownext) {
-				let _this = this;
-				uni.hideModal();
-				uni.showModal({
+			// 权限控制 (0.队长、1.财务官、2.交通官、3.交易官、4.气象官、5.情报官)  此处 job 应该 2
+			if (this.gameinfo.day.day > this.teaminfo.day.day && this.userinfo.job == 0 && !this.shownext) {
+				let [err,succ] = await uni.showModal({
 					title: '时间天数已更新',
 					content: '你现在可以进入下一个位置',
-					success(res) {
-						if (res.confirm) {
-							_this.setData({ shownext: true });
-						}
-					}
-				});
+				})
+				if(succ.confirm){ this.shownext = true; }
 			} else if (this.gameinfo.day.day == this.teaminfo.day.day) {
 				this.setData({ shownext: false });
 			}	
@@ -189,202 +184,133 @@ export default {
 		},
 		// 进入地图权限判断
 		judgeEnter() {
-			// 交通官
-			// debug
-			// if (this.userinfo.job == 2) this.enter();
-			// else tools.toast.none('无操作权限');
+			// 交通官 2
+			if (this.userinfo.job != 0) {
+				tools.toast.none('无操作权限');
+				return;
+			}
 			let cur = this.teaminfo.map.id;
 			let to = this.chooseland.id;
 			print.log(cur,to);
 			if( cur == to ){
-				print.log('ok');
+				this.enter();
 				return;
 			}
 			// 周围全地图 9-13  16-20  23-27  30-34  37-41
 			if(cur >= 9 && cur <= 13 || cur >= 16 && cur <= 20 || cur >= 23 && cur <= 27 || cur >= 30 && cur <= 34 || cur >= 37 && cur <= 41 ){
 				console.log('全地图');
 				if( to >= cur-8 && to <= cur-6 || to >= cur-1 && to <= cur+1 || to >= cur+6 && to <= cur+8  ){
-					print.log('ok')
+					this.enter();
 				}else tools.toast.none('位置非法！');
 			}
 			// 四角 1、7、43、49
 			if( cur == 1){ 
 				console.log('左上')
 				if( to == cur+1 || to >= cur+7 && to <= cur+8  ){
-					print.log('ok')
+					this.enter();
 				}else tools.toast.none('位置非法！');
 			}
 			if( cur == 7){ 
 				console.log('右上') 
 				if( to == cur-1 || to >= cur+6 && to <= cur+7  ){
-					print.log('ok')
+					this.enter();
 				}else tools.toast.none('位置非法！');
 			}
 			if( cur == 43){ 
 				console.log('左下') 
 				if( to == cur+1 || to >= cur-7 && to <= cur-6  ){
-					print.log('ok')
+					this.enter();
 				}else tools.toast.none('位置非法！');
 			}
 			if( cur == 49){ 
 				console.log('右下') 
 				if( to == cur-1 || to >= cur-8 && to <= cur-7  ){
-					print.log('ok')
+					this.enter();
 				}else tools.toast.none('位置非法！');
 			}			
 			// 上 2-6 、下 44-48 、左 8,15,22,29,36 、右边 14,21,28,35,42
 			if( cur >= 2 && cur <= 6){ 
 				console.log('上部') 
 				if( to >= cur-1 && to <= cur+1  || to >= cur+6 && to <= cur+8  ){
-					print.log('ok')
+					this.enter();
 				}else tools.toast.none('位置非法！');
 			}
 			if( cur >= 44 && cur <= 48){ 
 				console.log('下部') 
 				if( to >= cur-1 && to <= cur+1  || to >= cur-8 && to <= cur-6  ){
-					print.log('ok')
+					this.enter();
 				}else tools.toast.none('位置非法！');
 			}
 			if( [8,15,22,29,36].indexOf(cur) != -1 ){ 
 				console.log('左部') 
 				if( to >= cur-7 && to <= cur-6  || to >= cur+7 && to <= cur+8  || to == cur+1){
-					print.log('ok')
+					this.enter();
 				}else tools.toast.none('位置非法！');
 			}
 			if( [14,21,28,35,42].indexOf(cur) != -1 ){ 
 				console.log('右部') 
 				if( to >= cur-8 && to <= cur-7  || to >= cur+6 && to <= cur+7  || to == cur-1){
-					print.log('ok')
+					this.enter();
 				}else tools.toast.none('位置非法！');
 			}
 			
 		},
 		// 进入地图
-		enter() {
+		async enter() {
+			tools.loading.show('加载中')
 			print.log(this.chooseland, this.teaminfo);
+			let cland = this.chooseland.id;  // 当前位置
+			let tland = this.teaminfo.map.id;	// 下一步位置
+			let clandType = this.chooseland.land;  //  land:4 古墓（王陵）
 			// 未迷路
 			if (this.teaminfo.lose == 0) {
-				let cland = this.chooseland.id;
-				let tland = this.teaminfo.map.id;
 				if (this.gameinfo.day.day > this.teaminfo.day.day) {
-					if (this.teaminfo.map.id % 7 != 0 && (this.teaminfo.map.id + 1) % 7 != 0) {
-						// 中间
-						if (
-							(cland >= tland - 8 && cland <= tland - 6) ||
-							(cland >= tland + 6 && cland <= tland + 8) ||
-							(cland >= tland - 1 && cland <= tland + 1) ||
-							cland == tland
-						) {
-							print.log('ok');
-							// 更新位置
-							apis.updateTeamMapDay(this.teaminfo.id, cland, this.gameinfo.day_id);
-							// 记录轨迹
-							apis.addTeamRoute(this.teaminfo.id, this.gameinfo.id, cland).then(res => {
-								tools.toast.success('位置更新成功！');
-								this.hideModal();
-								this.getinfo();
-							});
-						} else {
-							tools.toast.none('位置不合法');
-						}
-					} else if (this.teaminfo.map.id % 7 == 0) {
-						// 左边
-						if ((cland >= tland - 7 && cland <= tland - 6) || (cland >= tland + 7 && cland <= tland + 8) || cland == tland + 1 || cland == tland) {
-							print.log('ok');
-							// 更新位置
-							apis.updateTeamMapDay(this.teaminfo.id, cland, this.gameinfo.day_id);
-							// 记录轨迹
-							apis.addTeamRoute(this.teaminfo.id, this.gameinfo.id, cland).then(res => {
-								tools.toast.success('位置更新成功！');
-								this.hideModal();
-								this.getinfo();
-							});
-						} else {
-							tools.toast.none('位置不合法');
-						}
-					} else {
-						if ((cland >= tland - 8 && cland <= tland - 7) || (cland >= tland + 6 && cland <= tland + 7) || cland == tland - 1 || cland == tland) {
-							print.log('ok');
-							// 更新位置
-							apis.updateTeamMapDay(this.teaminfo.id, cland, this.gameinfo.day_id);
-							// 记录轨迹
-							apis.addTeamRoute(this.teaminfo.id, this.gameinfo.id, cland).then(res => {
-								tools.toast.success('位置更新成功！');
-								this.hideModal();
-								this.getinfo();
-							});
-						} else {
-							tools.toast.none('位置不合法');
-						}
-					}
+					// 更新位置
+					await apis.updateTeamMapDay(this.teaminfo.id, cland, this.gameinfo.day_id);
+					// 记录轨迹
+					await apis.addTeamRoute(this.teaminfo.id, this.gameinfo.id, cland);
 				} else {
-					// 右边
 					tools.toast.none('未开启下一天，无法进入');
+					return;
 				}
 			}
 			// 迷路，点击原地
 			else if (this.teaminfo.lose != 0 && this.chooseland.id == this.teaminfo.map_id) {
-				let cland = this.chooseland.id;
-				let tland = this.teaminfo.map.id;
 				if (this.gameinfo.day.day > this.teaminfo.day.day) {
-					if (this.teaminfo.map.id % 7 != 0 && (this.teaminfo.map.id + 1) % 7 != 0) {
-						// 中间
-						if (
-							(cland >= tland - 8 && cland <= tland - 6) ||
-							(cland >= tland + 6 && cland <= tland + 8) ||
-							(cland >= tland - 1 && cland <= tland + 1) ||
-							cland == tland
-						) {
-							print.log('ok');
-							// 更新位置
-							apis.updateTeamMapDay(this.teaminfo.id, cland, this.gameinfo.day_id);
-							// 记录轨迹
-							apis.addTeamRoute(this.teaminfo.id, this.gameinfo.id, cland).then(res => {
-								tools.toast.success('位置更新成功！');
-								this.hideModal();
-								this.getinfo();
-							});
-						} else {
-							tools.toast.none('位置不合法');
-						}
-					} else if (this.teaminfo.map.id % 7 == 0) {
-						// 左边
-						if ((cland >= tland - 7 && cland <= tland - 6) || (cland >= tland + 7 && cland <= tland + 8) || cland == tland + 1 || cland == tland) {
-							print.log('ok');
-							// 更新位置
-							apis.updateTeamMapDay(this.teaminfo.id, cland, this.gameinfo.day_id);
-							// 记录轨迹
-							apis.addTeamRoute(this.teaminfo.id, this.gameinfo.id, cland).then(res => {
-								tools.toast.success('位置更新成功！');
-								this.hideModal();
-								this.getinfo();
-							});
-						} else {
-							tools.toast.none('位置不合法');
-						}
-					} else {
-						if ((cland >= tland - 8 && cland <= tland - 7) || (cland >= tland + 6 && cland <= tland + 7) || cland == tland - 1 || cland == tland) {
-							print.log('ok');
-							// 更新位置
-							apis.updateTeamMapDay(this.teaminfo.id, cland, this.gameinfo.day_id);
-							// 记录轨迹
-							apis.addTeamRoute(this.teaminfo.id, this.gameinfo.id, cland).then(res => {
-								tools.toast.success('位置更新成功！');
-								this.hideModal();
-								this.getinfo();
-							});
-						} else {
-							tools.toast.none('位置不合法');
-						}
-					}
+					// 更新位置
+					await apis.updateTeamMapDay(this.teaminfo.id, cland, this.gameinfo.day_id);
+					// 记录轨迹
+					await apis.addTeamRoute(this.teaminfo.id, this.gameinfo.id, cland);
 				} else {
-					// 右边
 					tools.toast.none('未开启下一天，无法进入');
+					return;
 				}
-				// 迷路，点击其他地方
-			} else {
+			} 
+			// 迷路未点击原地
+			else {
 				tools.toast.none('迷路状态只能呆在原地！');
+				return;
 			}
+			
+			// 到达古墓 获得一个 智者密函
+			if(clandType == 4){
+				console.log('到达古墓，奖励智者密函*1');
+				// 获取路径信息 一直呆在古墓，不会一直发放
+				let route = await apis.findAllRouteByTeam(this.userinfo.team_id)
+				const { count,rows } = route.data;
+				if(rows[count-2].map_id != rows[count-1].map_id){
+					let statistic_id = this.teaminfo.statistic_id;
+					let tid = this.teaminfo.id;
+					let gid = this.gameinfo.id;
+					this.updateModuleNumber(statistic_id, 4, 1);
+					await apis.addOneTran(gid, -1, tid, tid, 0, 1, 4, 1, `到达古墓，奖励智者密函*1`);
+					tools.toast.none('到达古墓，奖励智者密函*1');
+				}
+			}
+			
+			tools.toast.success('位置更新成功！');
+			this.hideModal();
+			this.getCurTeamInfo();
 		},
 		// 获取相同位置上的队伍信息
 		showmapteam(e) {
@@ -393,8 +319,7 @@ export default {
 				apis.getAllTeamByMap(this.chooseland.id).then(res => {
 					this.setData({ mapteamitem: res.data.rows });
 				});
-			} else {
-			}
+			} 
 		},
 		// 获取团队信息
 		async showTeam(j) {
