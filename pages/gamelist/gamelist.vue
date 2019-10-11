@@ -3,7 +3,7 @@
 		<view class="box">
 			<view class="top">
 				<scroll-view scroll-x class="bg-white nav" scroll-with-animation :scroll-left="scrollLeft">
-					<view class="cu-item" v-for="(item,index) in nav" :key="index"  :class="index==TabCur?'text-green cur':''" @click="tabSelect" :data-id="index">{{ item.text }}</view>
+					<view class="cu-item" v-for="(item,index) in nav" :key="index"  :class="index==TabCur?'text-green cur':''" @click="tabSelect" :data-id="item.id" :data-index="index">{{ item.text }}</view>
 				</scroll-view>
 			</view>
 
@@ -45,7 +45,8 @@ const tools = require('../../utils/tools.js');
 export default {
 	data() {
 		return {
-			nav: [{ id: 1, text: '全部赛事' }, { id: 2, text: '未开始' }, { id: 3, text: '进行中' }, { id: 4, text: '已结束' }],
+			// 状况（-1.暂停、0.未开始、1.开始、2.结束）
+			nav: [{ id: -2, text: '全部赛事' }, { id: -1, text: '暂停' }, { id: 0, text: '未开始' }, { id: 1, text: '进行中' }, { id: 2, text: '已结束' }],
 			TabCur: 0,
 			scrollLeft: 0,
 			gameList: [],
@@ -54,7 +55,7 @@ export default {
 		};
 	},
 	onLoad: function(options) {
-		this.navto(0);
+		this.navto(-2);
 	},
 	methods: {
 		// 设值函数
@@ -63,17 +64,17 @@ export default {
 		tabSelect(e) {
 			print.log('导航索引', e.currentTarget.dataset.id);
 			this.setData({
-				TabCur: e.currentTarget.dataset.id,
-				scrollLeft: (e.currentTarget.dataset.id - 1) * 60
+				TabCur: e.currentTarget.dataset.index,
+				scrollLeft: (e.currentTarget.dataset.index - 1) * 60
 			});
 			// 调用方法
-			this.navto(e.currentTarget.dataset.id-1);
+			this.navto(e.currentTarget.dataset.id);
 		},
 		// 执行导航方法
 		async navto(id) {
 			tools.loading.show('加载中');
 			let game;
-			if (id == 0) {
+			if (id == -2) {
 				game = await apis.findAllGame();
 				this.gameList = game.data.rows;
 				tools.loading.hide();

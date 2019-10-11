@@ -352,7 +352,7 @@
 						</view>
 						<!-- 下拉需要显示的物品 -->
 						<scroll-view scroll-y class="select_box" v-if="judgevillage">
-							<view class="select_one text-xs" @click="chooseVillageItem" :data-name="0">食物</view>
+							<view class="select_one text-xs" @click="chooseVillageItem" :data-name="6">食物</view>
 							<view class="select_one text-xs" @click="chooseVillageItem" :data-name="1">水</view>
 						</scroll-view>
 					</scroll-view>

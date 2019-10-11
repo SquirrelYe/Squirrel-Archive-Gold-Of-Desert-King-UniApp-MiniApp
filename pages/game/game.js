@@ -79,16 +79,16 @@ export default {
 	},
 	onLoad: function(options) {
 		// 前面页面传递参数
-		// let info = JSON.parse(options.info);
-		// console.log('参数传递', info);
-		// this.setData({ uid: info.id, gid: info.game_id, tid: info.team_id });
+		let info = JSON.parse(options.info);
+		console.log('参数传递', info);
+		this.setData({ uid: info.id, gid: info.game_id, tid: info.team_id });
 
 		this.getmap();
 		this.getCurInfo();
 		// 定时刷新数据
 		setInterval(() => {
 			this.reFresh();
-		}, 5000);
+		}, 10000);
 	},
 	filters: { ...filter },
 	methods: {
@@ -99,8 +99,9 @@ export default {
 		// 定时刷新
 		async reFresh(){
 			this.getCurInfo();
+			// 小组状态（0.正常、-1.冻结、-2.迷路、-3.死亡、1.使用帐篷、2.使用指南针、3.使用智者密函、4.达到大本营，游戏结束）
 			// 权限控制 (0.队长、1.财务官、2.交通官、3.交易官、4.气象官、5.情报官)  此处 job 应该 2
-			if (this.gameinfo.day.day > this.teaminfo.day.day && this.userinfo.job == 0 && !this.shownext) {
+			if (this.gameinfo.day.day > this.teaminfo.day.day && this.userinfo.job == 0 && this.teaminfo.condition != -3 && this.teaminfo.condition != 4 && !this.shownext) {
 				let [err,succ] = await uni.showModal({
 					title: '时间天数已更新',
 					content: '你现在可以进入下一个位置',
@@ -141,9 +142,10 @@ export default {
 		},
 		// 判断点击
 		show(e) {
+			let condition = this.teaminfo.condition; // 小组状态（0.正常、-1.冻结、-2.迷路、-3.死亡、1.使用帐篷、2.使用指南针、3.使用智者密函、4.达到大本营，游戏结束）
 			let job = this.userinfo.job; // 权限控制 (0.队长、1.财务官、2.交通官、3.交易官、4.气象官、5.情报官)
 			let j = e.currentTarget.dataset.item.judge;
-			console.log(job, j);
+			console.log(condition,job, j);
 			if (j == -1) {
 				this.showGame();
 				this.setData({ judge: j });
@@ -261,7 +263,12 @@ export default {
 			print.log(this.chooseland, this.teaminfo);
 			let cland = this.chooseland.id;  // 当前位置
 			let tland = this.teaminfo.map.id;	// 下一步位置
-			let clandType = this.chooseland.land;  //  land:4 古墓（王陵）
+			let clandType = this.chooseland.land;  //  land: 0 大本营，4 古墓（王陵）
+			// 第一天不允许在大本营，死亡，达到大本营 不允许操作
+			if(this.gameinfo.day.day == 2 && clandType ===0 || this.teaminfo.condition == 4 || this.teaminfo.condition == -3){
+				tools.toast.none('操作不允许');
+				return;				
+			}
 			// 未迷路
 			if (this.teaminfo.lose == 0) {
 				if (this.gameinfo.day.day > this.teaminfo.day.day) {
@@ -292,6 +299,15 @@ export default {
 				return;
 			}
 			
+			// 到达大本营 游戏结束
+			if(clandType === 0){
+				console.log('到达大本营,游戏结束');
+				await apis.setTeamCondition(this.teaminfo.id, 4);
+				tools.toast.none('到达大本营,游戏结束');
+				// 记录排名
+				let rank = await apis.createRank(this.teaminfo.id, this.gameinfo.id)
+				console.log('记录排名信息',rank.data)
+			}			
 			// 到达古墓 获得一个 智者密函
 			if(clandType == 4){
 				console.log('到达古墓，奖励智者密函*1');
@@ -707,7 +723,7 @@ export default {
 			this.setData({ village_thing: e.currentTarget.dataset.name, judgevillage: false });
 			// 村庄只能交易 食物 和 水
 			let x = this.village_thing;			
-			if (x == 0) this.village_thingName = '食物';
+			if (x == 6) this.village_thingName = '食物';
 			if (x == 1) this.village_thingName = '水';			
 		},
 		// 更新职位
@@ -748,20 +764,30 @@ export default {
 			}
 			tools.loading.show('加载中');
 			let res = await apis.findAllBagByTeam(this.teaminfo.statistic_id);
+			// village_thing 1水 6食物
 			// 计算负载
 			let load = 0;
-			if (this.village_thing == 0) load = Number(res.data.load) - Number(10 * this.number);
+			if (this.village_thing == 6) load = Number(res.data.load) - Number(10 * this.number);
 			if (this.village_thing == 1) load = Number(res.data.load) - Number(100 * this.number);
 			// 计算金币
+			let price;
 			let money = 0;
-			if (this.village_thing == 0) money = Number(res.data.money) - Number(20 * this.number);
-			if (this.village_thing == 1) money = Number(res.data.money) - Number(50 * this.number);
+			if (this.village_thing == 6){
+				price = 20;
+				money = Number(res.data.money) - Number(20 * this.number);
+			}
+			if (this.village_thing == 1){
+				price = 50;
+				money = Number(res.data.money) - Number(50 * this.number);
+			}
 			if (load < 0) {
 				tools.toast.none('载重不足！');
 				return;
 			}
 			this.updateModuleNumber(this.teaminfo.statistic_id, this.village_thing, this.number);
-			apis.updateMoneyLoad(money, load, this.teaminfo.statistic_id);
+			await apis.updateMoneyLoad(money, load, this.teaminfo.statistic_id);
+			// 写入交易
+			await apis.addOneTran(this.gid, 3, this.tid, this.tid, price, this.number, this.village_thing, 1, `村庄交易，物品为${this.village_thingName}`);
 			// 更新团队信息
 			this.getCurTeamInfo();
 			this.hideModal();
@@ -799,7 +825,8 @@ export default {
 		},
 		// 物品数量模板
 		async updateModuleNumber(statistic_id, module_id, number) {
-			if (number > 0) {
+			console.log('物品变化',statistic_id, module_id, number)
+			if (Number(number) > 0) {
 				// 更新库存数量
 				let res = await apis.moduleFindOrCreate(statistic_id, module_id, number);
 				print.log('物品数量模板',res.data);
@@ -820,7 +847,7 @@ export default {
 				}
 				// 若为帐篷，则更新 use 值
 				if( module_id==3 ){
-					const { id,use } = res.data[0];
+					const { id,use=0 } = res.data[0];
 					console.log('更新use',id,use);
 					let curUse = Number(use) + Number(number*3);
 					await apis.updateModuleUseNumber(id,curUse);

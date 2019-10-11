@@ -44,4 +44,7 @@ module.exports={
   addTeamRoute(team_id, game_id, map_id) { return req.get('/ent/route', { 'judge': 1, 'team_id': team_id, 'game_id': game_id, 'map_id': map_id })},
   getmap() { return req.get('/ent/map', { 'judge':0 }) },
   getAllTeamByMap(map) { return req.get('/ent/team', { 'judge': 4,'map_id':map }) },
+  // 排名
+  createRank(team_id, game_id) { return req.get('/ent/rank', { 'judge':1, team_id, game_id }) },
+  
 }
